@@ -657,18 +657,21 @@ class InlineInterestingLinkProcessor(markdown.treeprocessors.Treeprocessor):
         return url
 
     def is_image(self, url: str) -> bool:
+        # List some common image MIME types
+        IMAGE_TYPES = ["image/jpeg", "image/png", "image/svg+xml", "image/gif", "image/bmp", "image/webp", "image/tiff",]
+        
         if not self.markdown.image_preview_enabled:
             return False
-        parsed_url = urllib.parse.urlparse(url)
-        # remove html urls which end with img extensions that can not be shorted
-        if parsed_url.netloc == 'pasteboard.co':
+        
+        response = requests.head(url)
+        if not response.ok:
             return False
 
-        # List from http://support.google.com/chromeos/bin/answer.py?hl=en&answer=183093
-        for ext in [".bmp", ".gif", ".jpg", "jpeg", ".png", ".webp"]:
-            if parsed_url.path.lower().endswith(ext):
-                return True
-        return False
+        # Checks to see if the content is an image base on the HTML header
+        if "Content-Type" not in response.headers:
+            return False
+
+        return response.headers["Content-Type"] in IMAGE_TYPES
 
     def corrected_image_source(self, url: str) -> str:
         # This function adjusts any urls from linx.li and
